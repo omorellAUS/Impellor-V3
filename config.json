@@ -1,3 +1,4 @@
+```json
 {
   "input_path": "./test.obj",
   "output_path": "./output/fit.pcd",
@@ -6,3 +7,4 @@
   "icp_max_correspondence_distance": 0.01,
   "ransac_distance_threshold": 0.02
 }
+```
