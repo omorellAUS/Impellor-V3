@@ -1,0 +1,10 @@
+{
+  "name": "impellor-v1",
+  "version": "3.0.0",
+  "dependencies": [
+    "pcl",
+    "opencascade",
+    "nlohmann-json"
+  ],
+  "builtin-baseline": "4f6d3087685fc2b318b997acbdcabc74e9fbb57a"
+}
