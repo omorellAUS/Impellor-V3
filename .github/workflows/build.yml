@@ -1,0 +1,46 @@
+name: Impellor V3 Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install vcpkg
+      run: git clone https://github.com/Microsoft/vcpkg.git && .\vcpkg\bootstrap-vcpkg.bat
+
+    - name: Install dependencies
+      run: .\vcpkg\vcpkg.exe install --triplet x64-windows
+
+    - name: Configure CMake
+      run: cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE="vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
+
+    - name: Build with CMake
+      run: cmake --build build --config Release
+
+    - name: Create sample config
+      run: |
+        echo '{"mesh_paths": ["test.obj"], "tolerance": 0.02, "blade_count": 8, "fillet_radius": 0.5, "section_count": 8, "icp_max_distance": 0.1, "icp_max_iterations": 100}' > cli_config.json
+
+    - name: Run the compiled binary
+      run: .\build\Release\cli_engine.exe --config cli_config.json --output_step output/pocket.step --output_json output/output.json
+      working-directory: .
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-artifacts
+        path: |
+          build/Release/cli_engine.exe
+          output/*.step
+          output/*.ply
+          output/*.json
+          output/*.csv
