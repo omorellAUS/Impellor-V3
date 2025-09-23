@@ -1,0 +1,83 @@
+Impellor V3: Installation and Usage Guide
+
+For complete beginners—no coding needed! Follow each step carefully. If stuck, screenshot errors and search on Google or ask on Autodesk Fusion 360 forums (forums.autodesk.com, free to join).
+
+What This Tool Does
+- Takes 3D scan(s) (.stl, .obj, .ply) of an impeller, aligns with ICP, segments blades.
+- Fits smooth surfaces (bore, blades, plates), adds fillets, creates a STEP file.
+- In Fusion 360, imports STEP, stitches surfaces, patterns blades, adds fillets.
+- Outputs deviation maps (CSV/PLY) and blade parameter reports (JSON/CSV).
+
+What You Need
+- Windows or Mac computer.
+- Autodesk Fusion 360 (free for hobbyists—autodesk.com).
+- For C++ CLI engine: vcpkg, CMake, Visual Studio (Windows) or Xcode (Mac) (see Step 3).
+- GitHub account for CI/CD (optional, for automated builds).
+
+Beginner Option
+The C++ CLI engine (`fit.cpp`) needs compiling with vcpkg. If new:
+- Use pre-built binaries from GitHub Actions artifacts.
+- Ask a coder friend to compile it.
+- Test the Fusion add-in alone (errors without CLI but helps learn Fusion).
+
+Step 1: Get the Files
+- Clone from GitHub (if repo exists) or create `ImpellorV3` folder manually.
+- If using ZIP, right-click > “Extract All” (Windows) or double-click (Mac).
+
+Step 2: Install the Fusion 360 Add-in
+- Open File Explorer (Windows) or Finder (Mac).
+- Find Fusion 360’s AddIns folder:
+  - Windows: `C:\Users\YourUsername\AppData\Roaming\Autodesk\Autodesk Fusion 360\API\AddIns` (type `%appdata%` in File Explorer).
+  - Mac: `~/Library/Application Support/Autodesk/Autodesk Fusion 360/API/AddIns` (Cmd+Shift+G in Finder, paste path).
+- Copy `fusion_addin` folder (with `ImpellerRE.py`) from `ImpellorV3` to AddIns.
+- Copy `config.json` to `ImpellorV3` (not inside `fusion_addin`).
+- Edit `config.json` in Notepad/TextEdit:
+  - Set “engine_path” to your CLI engine (e.g., `C:\ImpellorV3\cli_engine\cli_engine.exe`).
+  - Add mesh file paths under “mesh_paths” (e.g., ["path/to/scan1.stl", "path/to/scan2.obj"]).
+  - Set “blade_count” to match your impeller’s blade count.
+  - Save.
+- Restart Fusion 360.
+
+Step 3: Build the CLI Engine with vcpkg
+- Install vcpkg (once):
+  - Download from github.com/microsoft/vcpkg.
+  - Run `bootstrap-vcpkg.bat` (Windows) or `./bootstrap-vcpkg.sh` (Mac).
+  - Add to PATH (search “add vcpkg to PATH Windows/Mac”).
+- Install deps: Run `vcpkg install pcl opencascade nlohmann-json` (installs PCL, OCCT, jsoncpp).
+- Open Command Prompt (Windows: Win+R, type `cmd`) or Terminal (Mac).
+- Navigate to `ImpellorV3`:
+  - Windows: `cd C:\ImpellorV3`.
+  - Mac: `cd ~/ImpellorV3`.
+- Run:
+  - `cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=[vcpkg_root]/scripts/buildsystems/vcpkg.cmake`.
+  - `cmake --build build`.
+- Success? See `cli_engine.exe` (Windows) or `cli_engine` (Mac) in `build`.
+- Errors? Search “CMake vcpkg PCL error [your error]”.
+- Update `config.json` with the full path to `cli_engine`.
+
+Step 4: GitHub CI/CD (Optional)
+- Push to GitHub repo (create if needed: github.com/yourusername/ImpellorV3).
+- On push/PR to main, Actions runs build.yml: Installs vcpkg deps, builds, runs on sample mesh, uploads STEP/PLY artifacts.
+- View artifacts in GitHub > Actions > Run > Artifacts.
+
+Step 5: Run the Tool
+- Open Fusion 360.
+- Tools > Add-Ins > Scripts and Add-Ins.
+- Select “ImpellerRE”, click Run.
+- In the popup:
+  - Pick a main mesh (.stl, .obj, .ply).
+  - Additional meshes from `config.json`.
+  - Set tolerance (0.02 mm), blade count (8), fillet radius (0.5 mm), section count (8).
+  - Click OK.
+- The tool processes, exports STEP, etc.
+
+Step 6: Check Outputs
+- In `ImpellorV3/output`: STEP, JSON, CSV, PLY.
+- Test with simple meshes. Adjust tolerance if needed.
+
+Tips
+- Meshes must be in mm.
+- For ICP, ensure partial scans overlap.
+- Blade segmentation requires accurate blade count in `config.json`.
+- Backup files before editing.
+- Help: YouTube “Fusion 360 add-in tutorial” or Autodesk forums.
