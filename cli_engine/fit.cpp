@@ -1,6 +1,7 @@
 ```cpp
 #include <iostream>
 #include <filesystem>
+#include <fstream>
 #include <nlohmann/json.hpp>
 #include <pcl/io/obj_io.h>
 #include <pcl/point_types.h>
@@ -19,12 +20,15 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    // Read configuration
-    std::ifstream config_file(argv[1]);
-    if (!config_file.is_open()) {
-        std::cerr << "Error: Could not open config file: " << argv[1] << std::endl;
+    // Validate config file
+    std::string config_path = argv[1];
+    if (!std::filesystem::exists(config_path)) {
+        std::cerr << "Error: Config file not found: " << config_path << std::endl;
         return 1;
     }
+
+    // Read configuration
+    std::ifstream config_file(config_path);
     json config;
     try {
         config_file >> config;
@@ -33,12 +37,19 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    std::string input_path = config["input_path"];
-    std::string output_path = config["output_path"];
-    int blade_count = config["blade_count"];
-    int icp_max_iterations = config["icp_max_iterations"];
-    double icp_max_distance = config["icp_max_correspondence_distance"];
-    double ransac_threshold = config["ransac_distance_threshold"];
+    // Set default values
+    std::string input_path = config.value("input_path", "test.obj");
+    std::string output_path = config.value("output_path", "output/fit.pcd");
+    int blade_count = config.value("blade_count", 8);
+    int icp_max_iterations = config.value("icp_max_iterations", 100);
+    double icp_max_distance = config.value("icp_max_correspondence_distance", 0.01);
+    double ransac_threshold = config.value("ransac_distance_threshold", 0.02);
+
+    // Validate input file
+    if (!std::filesystem::exists(input_path)) {
+        std::cerr << "Error: Input file not found: " << input_path << std::endl;
+        return 1;
+    }
 
     // Create output directory
     std::filesystem::create_directories(std::filesystem::path(output_path).parent_path());
@@ -55,6 +66,12 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    // Basic mesh validation
+    if (cloud->empty()) {
+        std::cerr << "Error: Loaded mesh is empty" << std::endl;
+        return 1;
+    }
+
     // Compute normals if missing
     if (!cloud->hasNormals()) {
         std::cerr << "Warning: OBJ file has no normals, computing normals..." << std::endl;
@@ -68,13 +85,18 @@ int main(int argc, char* argv[]) {
         pcl::concatenateFields(*cloud, *normals, *cloud);
     }
 
-    // Example processing: Smooth point cloud using MLS
+    // Smooth point cloud using MLS
     pcl::PointCloud<pcl::PointNormal>::Ptr smoothed_cloud(new pcl::PointCloud<pcl::PointNormal>);
-    pcl::MovingLeastSquares<pcl::PointNormal, pcl::PointNormal> mls;
-    mls.setInputCloud(cloud);
-    mls.setPolynomialFit(true);
-    mls.setSearchRadius(0.05);
-    mls.process(*smoothed_cloud);
+    try {
+        pcl::MovingLeastSquares<pcl::PointNormal, pcl::PointNormal> mls;
+        mls.setInputCloud(cloud);
+        mls.setPolynomialFit(true);
+        mls.setSearchRadius(0.05);
+        mls.process(*smoothed_cloud);
+    } catch (const std::exception& e) {
+        std::cerr << "Error during MLS smoothing: " << e.what() << std::endl;
+        return 1;
+    }
 
     // Save output
     try {
@@ -85,7 +107,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    // Placeholder for further processing (ICP, segmentation, NURBS, STEP export)
+    // Placeholder for further processing
     std::cout << "Processing complete. Blade count: " << blade_count 
               << ", ICP iterations: " << icp_max_iterations 
               << ", ICP distance: " << icp_max_distance 
