@@ -1,4 +1,3 @@
-```cmake
 cmake_minimum_required(VERSION 3.20)
 project(ImpellorV3 LANGUAGES CXX)
 
@@ -35,4 +34,3 @@ target_link_libraries(fit PRIVATE ${PCL_LIBRARIES} ${OpenCASCADE_LIBRARIES} nloh
 
 # Add definitions for PCL
 add_definitions(${PCL_DEFINITIONS})
-```
