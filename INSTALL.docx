@@ -1,4 +1,3 @@
-```
 # Impellor V3 Installation Instructions
 
 ## Prerequisites
@@ -29,7 +28,7 @@
 
 3. **Configure and Build**
    ```bash
-   cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static -DCMAKE_BUILD_TYPE=Release
+   cmake -B build -S . -CMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static -DCMAKE_BUILD_TYPE=Release
    cmake --build build --config Release
    ```
 
@@ -45,11 +44,12 @@
    - Use the UI to select an input mesh and configure settings.
 
 6. **Test with Sample Mesh**
-   - Use `test.obj` included in the repository or download a free impeller STL/OBJ file.
-   - Update `config.json` with the correct input/output paths and parameters.
+   - Ensure `test.obj` is in the repository root (download a free impeller OBJ/STL with 8 blades if missing).
+   - Update `config.json` with correct paths and parameters.
 
-## Notes
-- Ensure `config.json` specifies the correct blade count for your mesh.
-- The binary outputs a PCD file to the `output` directory.
-- For CI/CD, push changes to GitHub to trigger the workflow.
-```
+## Troubleshooting
+
+- **vcpkg Install Fails**: Check internet, disk space (`dir`), and Visual Studio C++ tools.
+- **CMake Errors**: Verify `vcpkg.cmake` path, ensure PCL/OpenCascade versions match.
+- **fit.exe Crashes**: Check `test.obj` validity (contains vertices/faces, 8 blades) and `config.json` paths.
+- **CI/CD Fails**: Review GitHub Actions logs for specific errors, ensure `test.obj` exists.
