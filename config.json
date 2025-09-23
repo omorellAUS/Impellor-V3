@@ -1,0 +1,14 @@
+{
+  "engine_path": "C:/ImpellorV3/build/cli_engine.exe",
+  "default_tolerance": 0.02,
+  "default_blade_count": 8,
+  "default_fillet_radius": 0.5,
+  "default_section_count": 8,
+  "icp_max_distance": 0.1,
+  "icp_max_iterations": 100,
+  "mesh_paths": [
+    "C:/ImpellorV3/test.obj",
+    "C:/ImpellorV3/partial1.stl",
+    "C:/ImpellorV3/partial2.stl"
+  ]
+}
