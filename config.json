@@ -1,5 +1,5 @@
 {
-  "input_path": "test.obj",
+  "input_path": "Impeller.stl",
   "output_path": "output/fit.pcd",
   "blade_count": 8,
   "icp_max_iterations": 100,
