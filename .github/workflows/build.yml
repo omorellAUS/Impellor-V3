@@ -36,7 +36,6 @@ jobs:
       run: |
         git clone https://github.com/microsoft/vcpkg.git
         cd vcpkg
-        git fetch --unshallow
         git checkout 9a98f93671f984351377044210854900bfd73171
         .\bootstrap-vcpkg.bat
         cd ..
@@ -50,8 +49,18 @@ jobs:
     - name: Debug vcpkg installation
       shell: powershell
       run: |
-        dir vcpkg\installed\x64-windows-static
+        if (Test-Path vcpkg\installed) {
+          dir vcpkg\installed
+        } else {
+          echo "vcpkg\installed not found"
+        }
+        if (Test-Path vcpkg\installed\x64-windows-static) {
+          dir vcpkg\installed\x64-windows-static
+        } else {
+          echo "vcpkg\installed\x64-windows-static not found"
+        }
         .\vcpkg\vcpkg.exe list
+      continue-on-error: true
     - name: Clean up .DS_Store files
       shell: powershell
       run: |
