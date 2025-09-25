@@ -72,6 +72,9 @@ jobs:
       run: |
         $config = Get-Content -Path config.json -Raw | ConvertFrom-Json
         $config.input_path = "Impeller.stl"
+        $config.PSObject.Properties.Remove("blade_count")
+        $config | Add-Member -MemberType NoteProperty -Name "blade_count_min" -Value 8
+        $config | Add-Member -MemberType NoteProperty -Name "blade_count_max" -Value 20
         $config | ConvertTo-Json -Depth 10 | Set-Content -Path config.json
         Get-Content -Path config.json
 
