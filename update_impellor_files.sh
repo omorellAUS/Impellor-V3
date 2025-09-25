@@ -1,3 +1,16 @@
+#!/bin/bash
+cat > config.json << 'EOF'
+{
+  "input_path": "Impeller.stl",
+  "output_path": "output/fit.pcd",
+  "icp_max_iterations": 100,
+  "icp_max_correspondence_distance": 0.01,
+  "ransac_distance_threshold": 0.02,
+  "blade_count_min": 8,
+  "blade_count_max": 20
+}
+EOF
+cat > .github/workflows/build.yml << 'EOF'
 name: Build Impellor V3
 on:
   push:
@@ -94,3 +107,11 @@ jobs:
           build/Release/fit.exe
           output/fit.pcd
         if-no-files-found: warn
+EOF
+rm -f .DS_Store */.DS_Store
+echo ".DS_Store" >> .gitignore
+git rm -r --cached .DS_Store 2>/dev/null || true
+git rm -r --cached */.DS_Store 2>/dev/null || true
+git add config.json .github/workflows/build.yml .gitignore
+echo "Files updated. Open GitHub Desktop to commit and push changes."
+echo "Suggested commit message: 'Update build.yml, config.json, and .gitignore for 8-20 blade support'"
