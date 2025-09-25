@@ -1,31 +1,20 @@
 {
   "name": "impellor-v3",
   "version-string": "0.3.0",
+  "builtin-baseline": "e7b723f4c7d0b6b0d3682d3f5c7e8e8f5b8b3e2c",
   "dependencies": [
     {
       "name": "pcl",
-      "version>=": "1.13.0",
+      "version": "1.13.0",
       "features": ["vtk", "visualization", "surface"]
     },
     {
-      "name": "vtk",
-      "version>=": "9.2.6"
-    },
-    {
-      "name": "flann",
-      "version>=": "1.9.2"
-    },
-    {
-      "name": "qhull",
-      "version>=": "8.0.2"
-    },
-    {
       "name": "opencascade",
-      "version>=": "7.8.0"
+      "version": "7.8.0"
     },
     {
       "name": "nlohmann-json",
-      "version>=": "3.11.3"
+      "version": "3.11.3"
     }
   ]
 }
