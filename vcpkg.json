@@ -1,12 +1,12 @@
 {
   "name": "impellor-v3",
   "version-string": "0.3.0",
-  "builtin-baseline": "4334d8b4c8916018600212ab4dd4bbdc343065d1",
+  "builtin-baseline": "e7b723f4c7d0b6b0d3682d3f5c7e8e8f5b8b3e2c",
   "dependencies": [
     {
       "name": "pcl",
       "version>=": "1.13.0",
-      "features": ["vtk", "visualization", "surface"]
+      "features": ["vtk", "visualization", "surface-on-nurbs"]
     },
     {
       "name": "opencascade",
