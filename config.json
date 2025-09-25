@@ -1,8 +1,9 @@
 {
   "input_path": "Impeller.stl",
   "output_path": "output/fit.pcd",
-  "blade_count": 8,
   "icp_max_iterations": 100,
   "icp_max_correspondence_distance": 0.01,
-  "ransac_distance_threshold": 0.02
+  "ransac_distance_threshold": 0.02,
+  "blade_count_min": 8,
+  "blade_count_max": 20
 }
