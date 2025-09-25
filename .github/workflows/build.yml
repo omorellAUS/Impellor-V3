@@ -48,7 +48,7 @@ jobs:
     - name: Install dependencies with vcpkg
       shell: powershell
       run: |
-        .\vcpkg\vcpkg.exe install --triplet x64-windows-static pcl[vtk,visualization,surface]:x64-windows-static opencascade:x64-windows-static nlohmann-json:x64-windows-static
+        .\vcpkg\vcpkg.exe install --triplet x64-windows-static
       env:
         VCPKG_DEFAULT_TRIPLET: x64-windows-static
       continue-on-error: false
@@ -67,30 +67,24 @@ jobs:
         git rm -r --cached .DS_Store --quiet || true
         git rm -r --cached */.DS_Store --quiet || true
 
-    - name: Update config.json for Impeller.stl
+    - name: Verify config.json and input mesh
       shell: powershell
       run: |
-        $config = Get-Content -Path config.json -Raw | ConvertFrom-Json
-        $config.input_path = "Impeller.stl"
-        $config.PSObject.Properties.Remove("blade_count")
-        $config | Add-Member -MemberType NoteProperty -Name "blade_count_min" -Value 8
-        $config | Add-Member -MemberType NoteProperty -Name "blade_count_max" -Value 20
-        $config | ConvertTo-Json -Depth 10 | Set-Content -Path config.json
-        Get-Content -Path config.json
-
-    - name: Verify input mesh
-      shell: powershell
-      run: |
+        if (-Not (Test-Path "config.json")) {
+          Write-Error "config.json not found"
+          exit 1
+        }
         if (-Not (Test-Path "Impeller.stl")) {
           Write-Error "Impeller.stl not found in repository root"
           exit 1
         }
+        Get-Content -Path config.json
         dir *.stl
 
     - name: Configure CMake
       shell: powershell
       run: |
-        cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static -DCMAKE_BUILD_TYPE=Release
+        cmake -B build -S . -CMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static -DCMAKE_BUILD_TYPE=Release
         if ($LASTEXITCODE -ne 0) { exit 1 }
 
     - name: Build
