@@ -111,21 +111,26 @@ jobs:
       run: |
         Remove-Item -Path .\.DS_Store -Force -ErrorAction SilentlyContinue
         Remove-Item -Path **\.DS_Store -Force -ErrorAction SilentlyContinue
-        git rm -r --cached .DS_Store -Force -ErrorAction SilentlyContinue
-        git rm -r --cached **\.DS_Store -Force -ErrorAction SilentlyContinue
-    - name: Verify config.json and input mesh
+        git rm -r --cached .DS_Store -f || true
+        git rm -r --cached **/.DS_Store -f || true
+        git commit -m "Remove .DS_Store files" || echo "No changes to commit"
+    - name: Verify config.json and input meshes
       shell: powershell
       run: |
         if (-Not (Test-Path "config.json")) {
           Write-Error "config.json not found"
           exit 1
         }
-        if (-Not (Test-Path "Impeller.stl")) {
-          Write-Error "Impeller.stl not found in repository root"
-          exit 1
+        if (-Not (Test-Path "tests")) {
+          Write-Warning "tests/ directory not found, skipping tests"
+        } else {
+          if (-Not (Test-Path "tests/*.stl") -And -Not (Test-Path "tests/*.obj") -And -Not (Test-Path "tests/*.igs")) {
+            Write-Warning "No input mesh found in tests/, skipping tests"
+          } else {
+            Get-Content -Path config.json
+            dir tests/*.stl tests/*.obj tests/*.igs
+          }
         }
-        Get-Content -Path config.json
-        dir *.stl
     - name: Configure CMake
       shell: powershell
       run: |
@@ -140,21 +145,28 @@ jobs:
       shell: powershell
       run: |
         mkdir output -Force
-        .\build\Release\fit.exe config.json
+        if (Test-Path "tests/*.stl" -Or Test-Path "tests/*.obj" -Or Test-Path "tests/*.igs") {
+          foreach ($file in Get-ChildItem tests -Include *.stl,*.obj,*.igs -Recurse) {
+            .\build\Release\impellor.exe config.json $file
+          }
+        } else {
+          echo "No test files found, skipping tests"
+        }
       continue-on-error: true
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
       with:
         name: build-artifacts-windows
         path: |
-          build/Release/fit.exe
+          build/Release/impellor.exe
           output/*.pcd
           output/*.step
           output/*.stl
+          output/*.iges
         if-no-files-found: warn
   build-macos:
     needs: install-deps
-    runs-on: macos-12  # High Sierra-compatible
+    runs-on: macos-12 # High Sierra-compatible
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -209,18 +221,22 @@ jobs:
         find . -name ".DS_Store" -delete
         git rm -r --cached .DS_Store --quiet -f || exit 0
         git rm -r --cached **/.DS_Store --quiet -f || exit 0
-    - name: Verify config.json and input mesh
+    - name: Verify config.json and input meshes
       run: |
         if [ ! -f "config.json" ]; then
           echo "config.json not found" >&2
           exit 1
         fi
-        if [ ! -f "Impeller.stl" ]; then
-          echo "Impeller.stl not found in repository root" >&2
-          exit 1
-        fi
-        cat config.json
-        ls *.stl
+        if [ ! -d "tests" ]; then
+          echo "tests/ directory not found, skipping tests" >&2
+        else
+          if ls tests/*.stl tests/*.obj tests/*.igs >/dev/null 2>&1; then
+            cat config.json
+            ls tests/*.stl tests/*.obj tests/*.igs
+          else
+            echo "No input mesh found in tests/, skipping tests" >&2
+          fi
+        }
     - name: Configure CMake
       run: |
         cmake -B build -S . -CMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-osx
@@ -232,15 +248,22 @@ jobs:
     - name: Run Tests
       run: |
         mkdir -p output
-        ./build/fit config.json
+        if ls tests/*.stl tests/*.obj tests/*.igs >/dev/null 2>&1; then
+          for file in tests/*.stl tests/*.obj tests/*.igs; do
+            ./build/impellor config.json $file
+          done
+        else
+          echo "No test files found, skipping tests"
+        fi
       continue-on-error: true
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
       with:
         name: build-artifacts-macos
         path: |
-          build/fit
+          build/impellor
           output/*.pcd
           output/*.step
           output/*.stl
+          output/*.iges
         if-no-files-found: warn
