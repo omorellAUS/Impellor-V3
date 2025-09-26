@@ -1,17 +1,29 @@
-name: Build Impellor V3
+name: Build Impellor-V3
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
 jobs:
-  build:
+  install-deps:
     runs-on: windows-latest
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
+    - name: Cache vcpkg
+      uses: actions/cache@v4
+      id: cache-vcpkg
+      with:
+        path: |
+          vcpkg/installed/
+          vcpkg/scripts/
+          vcpkg/buildtrees/
+          vcpkg/downloads/
+          vcpkg/packages/
+        key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg/vcpkg.json') }}-${{ hashFiles('**/[A-Za-z]*.cmake') }}
+        restore-keys: vcpkg-${{ runner.os }}-
     - name: Setup CMake
       shell: powershell
       run: |
@@ -41,6 +53,7 @@ jobs:
         cd ..
     - name: Install dependencies with vcpkg
       shell: powershell
+      if: steps.cache-vcpkg.outputs.cache-hit != 'true'
       run: |
         .\vcpkg\vcpkg.exe install --triplet x64-windows-static
       env:
@@ -61,13 +74,45 @@ jobs:
         }
         .\vcpkg\vcpkg.exe list
       continue-on-error: true
+  build-test:
+    needs: install-deps
+    runs-on: windows-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Restore vcpkg cache
+      uses: actions/cache/restore@v4
+      with:
+        path: |
+          vcpkg/installed/
+          vcpkg/scripts/
+          vcpkg/buildtrees/
+          vcpkg/downloads/
+          vcpkg/packages/
+        key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg/vcpkg.json') }}-${{ hashFiles('**/[A-Za-z]*.cmake') }}
+    - name: Setup CMake
+      shell: powershell
+      run: |
+        $cmakeVersion = "3.20.0"
+        $cmakeUrl = "https://github.com/Kitware/CMake/releases/download/v${cmakeVersion}/cmake-${cmakeVersion}-windows-x86_64.zip"
+        $installPath = "C:\cmake"
+        New-Item -ItemType Directory -Force -Path $installPath | Out-Null
+        Invoke-WebRequest -Uri $cmakeUrl -OutFile "cmake.zip" -UseBasicParsing
+        Expand-Archive -Path "cmake.zip" -DestinationPath $installPath
+        $cmakeBinPath = Join-Path $installPath "cmake-${cmakeVersion}-windows-x86_64\bin"
+        echo "CMAKE_DIR=$cmakeBinPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        echo "$cmakeBinPath" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - name: Clean up .DS_Store files
       shell: powershell
       run: |
         Remove-Item -Path .\.DS_Store -Force -ErrorAction SilentlyContinue
-        Remove-Item -Path *\*.DS_Store -Force -ErrorAction SilentlyContinue
-        git rm -r --cached .DS_Store --quiet || true
-        git rm -r --cached */.DS_Store --quiet || true
+        Remove-Item -Path **\.DS_Store -Force -ErrorAction SilentlyContinue
+        git rm -r --cached .DS_Store -Force -ErrorAction SilentlyContinue
+        git rm -r --cached **\.DS_Store -Force -ErrorAction SilentlyContinue
     - name: Verify config.json and input mesh
       shell: powershell
       run: |
@@ -100,8 +145,102 @@ jobs:
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: build-artifacts
+        name: build-artifacts-windows
         path: |
           build/Release/fit.exe
-          output/fit.pcd
+          output/*.pcd
+          output/*.step
+          output/*.stl
+        if-no-files-found: warn
+  build-macos:
+    needs: install-deps
+    runs-on: macos-12  # High Sierra-compatible
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Restore vcpkg cache
+      uses: actions/cache/restore@v4
+      with:
+        path: |
+          vcpkg/installed/
+          vcpkg/scripts/
+          vcpkg/buildtrees/
+          vcpkg/downloads/
+          vcpkg/packages/
+        key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg/vcpkg.json') }}-${{ hashFiles('**/[A-Za-z]*.cmake') }}
+    - name: Setup CMake
+      run: |
+        curl -L -o cmake-3.20.0-macos10.10-universal.tar.gz https://cmake.org/files/v3.20/cmake-3.20.0-macos10.10-universal.tar.gz
+        tar -xzf cmake-3.20.0-macos10.10-universal.tar.gz
+        sudo cp -r cmake-3.20.0-macos10.10-universal/CMake.app/Contents/bin/* /usr/local/bin/
+        cmake --version
+    - name: Setup vcpkg
+      run: |
+        git clone https://github.com/microsoft/vcpkg.git
+        cd vcpkg
+        git checkout 9a98f93671f984351377044210854900bfd73171
+        ./bootstrap-vcpkg.sh
+        ./vcpkg integrate install
+        cd ..
+    - name: Install dependencies with vcpkg
+      run: |
+        ./vcpkg/vcpkg install --triplet x64-osx
+      env:
+        VCPKG_DEFAULT_TRIPLET: x64-osx
+      continue-on-error: false
+    - name: Debug vcpkg installation
+      run: |
+        if [ -d "vcpkg/installed" ]; then
+          ls vcpkg/installed
+        else
+          echo "vcpkg/installed not found"
+        fi
+        if [ -d "vcpkg/installed/x64-osx" ]; then
+          ls vcpkg/installed/x64-osx
+        else
+          echo "vcpkg/installed/x64-osx not found"
+        fi
+        ./vcpkg/vcpkg list
+      continue-on-error: true
+    - name: Clean up .DS_Store files
+      run: |
+        find . -name ".DS_Store" -delete
+        git rm -r --cached .DS_Store --quiet -f || exit 0
+        git rm -r --cached **/.DS_Store --quiet -f || exit 0
+    - name: Verify config.json and input mesh
+      run: |
+        if [ ! -f "config.json" ]; then
+          echo "config.json not found" >&2
+          exit 1
+        fi
+        if [ ! -f "Impeller.stl" ]; then
+          echo "Impeller.stl not found in repository root" >&2
+          exit 1
+        fi
+        cat config.json
+        ls *.stl
+    - name: Configure CMake
+      run: |
+        cmake -B build -S . -CMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-osx
+        if [ $? -ne 0 ]; then exit 1; fi
+    - name: Build
+      run: |
+        cmake --build build
+        if [ $? -ne 0 ]; then exit 1; fi
+    - name: Run Tests
+      run: |
+        mkdir -p output
+        ./build/fit config.json
+      continue-on-error: true
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-artifacts-macos
+        path: |
+          build/fit
+          output/*.pcd
+          output/*.step
+          output/*.stl
         if-no-files-found: warn
